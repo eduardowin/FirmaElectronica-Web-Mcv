@@ -1,0 +1,237 @@
+﻿@model E_FirmaElect_Demo.Models.FirmaElectronicaModel
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<script src="~/Scripts/jquery.validate.min.js"></script>
+<script src="~/Scripts/jquery.unobtrusive-ajax.min.js"></script>
+<script src="~/Scripts/jquery.validate.unobtrusive.js"></script>
+<script type="text/javascript">
+var tmr;
+
+function onSign()
+{
+   var ctx = document.getElementById('cnv').getContext('2d');
+   SetDisplayXSize( 500 );
+   SetDisplayYSize( 100 );
+   SetTabletState(0, tmr);
+   SetJustifyMode(0);
+   ClearTablet();
+   if(tmr == null)
+   {
+      tmr = SetTabletState(1, ctx, 50);
+   }
+   else
+   {
+      SetTabletState(0, tmr);
+      tmr = null;
+      tmr = SetTabletState(1, ctx, 50);
+   }
+}
+
+function onClear()
+{
+   ClearTablet();
+}
+
+function onDone()
+{
+   if(NumberOfTabletPoints() == 0)
+   {
+      alert("Please sign before continuing");
+   }
+   else
+   {
+      SetTabletState(0, tmr);
+      //RETURN TOPAZ-FORMAT SIGSTRING
+      SetSigCompressionMode(0);
+      $('#bioSigData').val(GetSigString());
+      $('#sigStringData').val(GetSigString());
+      //document.formDemoFirma.bioSigData.value = GetSigString();
+      //document.formDemoFirma.sigStringData.value += GetSigString();
+      //this returns the signature in Topaz's own format, with biometric information
+
+
+      //RETURN BMP BYTE ARRAY CONVERTED TO BASE64 STRING
+      SetImageXSize(500);
+      SetImageYSize(100);
+      SetImagePenWidth(5);
+      GetSigImageB64(SigImageCallback);
+   }
+}
+
+function SigImageCallback( str )
+{
+    $('#sigImageData').val(str);
+    //document.formDemoFirma.sigImageData.value = str;
+}
+
+
+    </script>
+
+
+<script type="text/javascript">
+    window.onunload = window.onbeforeunload = (function () {
+        closingSigWeb()
+    })
+    $(document).ready(function () {
+        $( "#@Html.IdFor(model => model.oPersona.DNI)" ).blur(function() {
+            var urlXML = '@Url.Action("Obtener_Archivo_Validado", "FirmaElectronica", new { pSigString = "_pSigString", pNum_DNI="_DNI" })'.replace('_pSigString', $('#@Html.IdFor(model => model.oFirmaElectronica.SIGSTRING_ENCRIPTADA)').val()).replace('_pNum_DNI', $('#@Html.IdFor(model => model.oPersona.DNI)').val()).replace('amp;', '');
+
+            $("#btnVerificarPDF").attr("href", urlXML);
+        });
+        $( "#@Html.IdFor(model => model.oFirmaElectronica.SIGSTRING_ENCRIPTADA)" ).blur(function() {
+            var urlXML = '@Url.Action("Obtener_Archivo_Validado", "FirmaElectronica", new { pSigString = "_pSigString", pNum_DNI = "_pNum_DNI" })'.replace('_pSigString', $('#@Html.IdFor(model => model.oFirmaElectronica.SIGSTRING_ENCRIPTADA)').val()).replace('_pNum_DNI', $('#@Html.IdFor(model => model.oPersona.DNI)').val()).replace('amp;', '');
+
+            $("#btnVerificarPDF").attr("href", urlXML);
+        });
+        $("#btngenerar").click(function (e) {
+            e.preventDefault
+            $('#@Html.IdFor(m=> m.oFirmaElectronica.SIGSTRING)').val($('#sigStringData').val());
+            $('#@Html.IdFor(m=> m.oFirmaElectronica.SIGSTRING_64)').val($('#sigImageData').val());
+
+            var fc_summit = function ()
+            {
+                var data = null;
+                data = new FormData($("#formDemoFirma").get(0));
+
+                $.ajax({
+                    type: 'POST',
+                    url: '@Url.Action("Index", "FirmaElectronica")',
+                    dataType: 'json',
+                    data: data,//{ arg: JSON.stringify(value) },
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.Resultado == 'Ok') {
+                            $('#@Html.IdFor(model => model.oFirmaElectronica.SIGSTRING_ENCRIPTADA)').val(data.oFirmaElectronica.SIGSTRING_ENCRIPTADA);
+                            var urlXML = '@Url.Action("Obtener_Archivo_Validado", "FirmaElectronica", new { pSigString = "_pSigString", pNum_DNI = "_pNum_DNI" })'.replace('_pSigString', $('#@Html.IdFor(model => model.oFirmaElectronica.SIGSTRING_ENCRIPTADA)').val()).replace('_pNum_DNI', $('#@Html.IdFor(model => model.oPersona.DNI)').val()).replace('amp;', '');
+
+                            $("#btnVerificarPDF").attr("href", urlXML);
+                            fc_MensajeBootBoxConfirm('success', "Archivo Firma Electrónica", "Se generó exitosamente el archivo con la firma electrónica", function () { }, function () { });
+                        }
+                        else {
+                            fc_MensajeBootBoxConfirm('waring', "Archivo Firma Electrónica", "Problemas al generar el archivo con firma electrónica", function () { }, function () { });
+
+                        }
+                    }
+                });
+            }
+            //Ini E.Z. 16/06/2016
+
+            fc_MensajeBootBoxConfirm('info', "Archivo Firma Electrónica", "Desea generar Archivo con firma electrónica", fc_summit, function () { });
+        });
+        function closingSigWeb() {
+            ClearTablet();
+            SetTabletState(0, tmr);
+        }
+
+    });
+    function onSuccesForm(pResponse) {
+        if (pResponse == 'Ok') {
+            fc_MensajeBootBoxConfirm('success', "Archivo Firma Electrónica", "Se generó exitosamente el archivo con la firma electrónica", function () { }, function () { });
+
+        }
+        else {
+            fc_MensajeBootBoxConfirm('waring', "Archivo Firma Electrónica", "Problemas al generar el archivo con firma electrónica", function () { }, function () { });
+
+        }
+    }
+
+</script>
+
+ 
+ 
+<div class="panel panel-success active" style="padding-top:55px;">
+    <div class="panel-heading">
+        <div class="row">
+            <div class="col-sm-12">
+                <label>
+                    <i class="glyphicon glyphicon-list-alt"></i> Firma Electronica
+                </label>
+            </div>
+        </div>
+    </div>
+    @using (Ajax.BeginForm("Index", "FirmaElectronica", new AjaxOptions { OnSuccess = "onSuccesForm", HttpMethod = "POST" }, new { id = "formDemoFirma", @class = "form-horizontal" }))
+    {
+        @Html.AntiForgeryToken()
+        @Html.HiddenFor(m => m.oFirmaElectronica.SIGSTRING)
+        @Html.HiddenFor(m => m.oFirmaElectronica.SIGSTRING_64)
+        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+        <div class="panel-body p-t-xxs">
+            <div class="form-horizontal">
+                <div class="form-group m-b-sm">
+                    <div class="col-sm-3">
+                        <label class="control-label ">Número Documento</label>
+                        <div class="input-group">
+                            <label for="date-picker-3" class="input-group-addon btn">
+                                <span class="glyphicon glyphicon-paperclip"></span>
+                            </label>
+                            @Html.TextBoxFor(model => model.oPersona.DNI,  new { @class = "form-control"    })
+                        </div>
+                    </div>
+                     
+                </div>
+                <div class="form-group m-b-sm">
+                    <div class="col-sm-3">
+                        <label class="control-label ">Ape. Paterno</label>
+                         
+                            @Html.TextBoxFor(model => model.oPersona.APE_PATERNO, new { @class = "form-control" })
+                    </div>
+                    <div class="col-sm-3">
+                        <label class="control-label ">Ape. Materno</label>
+                            @Html.TextBoxFor(model => model.oPersona.APE_MATERNO,  new { @class = "form-control" } )
+                    </div>
+                    <div class="col-sm-3">
+                        <label class="control-label ">Pri. Nombre</label>
+
+                        @Html.TextBoxFor(model => model.oPersona.PRI_NOMBRE, new { @class = "form-control" })
+                    </div>
+                    <div class="col-sm-3">
+                        <label class="control-label ">Seg. Nombre</label>
+                        @Html.TextBoxFor(model => model.oPersona.SEG_NOMBRE, new { @class = "form-control" })
+                    </div>
+
+                </div>
+
+                <div class="form-group m-b-sm">
+                    <div class="col-sm-12">
+                        <label class="control-label ">Imagen Firma</label>
+                        <table border="1" cellpadding="0" width="500">
+                            <tr>
+                                <td height="100" width="500">
+                                    <canvas id="cnv" name="cnv" width="500" height="100"></canvas>
+                                </td>
+                            </tr>
+                        </table>
+                        <br />
+                        @*<canvas name="SigImg" id="SigImg" width="500" height="100"></canvas>*@
+                    </div>
+
+                </div>
+                <div class="form-group m-b-sm">
+                    <div class="col-sm-7">
+                        <input id="SignBtn" name="SignBtn" type="button" value="Firmar" class="btn btn-success" onclick="javascript:onSign()" />&nbsp;&nbsp;&nbsp;&nbsp;
+                        <input id="btnLimpiar" name="ClearBtn" type="button" value="Limpiar" class="btn btn-success" onclick="javascript:onClear()" />&nbsp;&nbsp;&nbsp;&nbsp
+
+                        <input id="btnHecho" name="DoneBtn" type="button" value="Terminar" class="btn btn-success" onclick="javascript:onDone()" />&nbsp;&nbsp;&nbsp;&nbsp
+                        <input id="btngenerar"  type="button" value="Generar PDF" class="btn btn-primary"   />&nbsp;&nbsp;&nbsp;&nbsp
+
+                        <a id="btnVerificarPDF" href="@Url.Action("Obtener_Archivo_Validado", "FirmaElectronica", new { pSigString = "_pSigString", pNum_DNI="_DNI" })" class="btn btn-primary"><i class="fa fa-download"></i>&nbsp;Verificar Autenticidad</a>
+                        <input type=HIDDEN id="bioSigData" />
+                        <input type=HIDDEN id="sigImgData" />
+                        <br />
+                        <br />
+                        <textarea id="sigStringData" rows="20" cols="50"></textarea>
+                        <textarea id="sigImageData" rows="20" cols="50" style="display:none;">Base64 String: </textarea>
+                         
+                    </div>
+                    <div class="col-sm-5">
+                        <label class="control-label ">Sig String Encriptada</label>
+                        @Html.TextAreaFor(model => model.oFirmaElectronica.SIGSTRING_ENCRIPTADA, new { @class = "form-control" })
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
